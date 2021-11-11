@@ -3,6 +3,7 @@
 	import dayjs from 'dayjs';
 	import { slide, fly } from 'svelte/transition';
 	import { supabase, masterKey } from '../../../_global';
+	import { goto } from '$app/navigation';
 
 	$: loaded = false;
 	let thisUser;
@@ -12,6 +13,7 @@
 	$: user_familyName = '';
 	$: masterKey_input = '';
 
+	let isRegistering = false;
 	let isAbleToRegister = false;
 
 	onMount(async (e) => {
@@ -20,6 +22,7 @@
 
 	const login = async (e) => {
 		// check if user_email and user_password are not empty
+		isRegistering = true;
 		if (user_email && user_password) {
 			isAbleToRegister = false;
 			let { data, error } = await supabase.auth.signUp({
@@ -47,9 +50,11 @@
 	};
 
 	const createUserToTable = async (e) => {
-		let { data, error } = await supabase.from('registered_users').insert([{ email: user_email }, { given_name: user_givenName }, { family_name: user_familyName }]);
+		let { data, error } = await supabase.from('registered_users').insert([{ email: user_email, given_name: user_givenName, family_name: user_familyName }]);
 		if (!error) {
 			alert('User created successfully');
+			isRegistering = false;
+			goto('/');
 		} else {
 			alert(error.message);
 		}
@@ -92,61 +97,65 @@
 	</div>
 
 	<h3 class="my-5">Create Account</h3>
-	{#if isAbleToRegister}
-		<div transition:slide|local={{ duration: 500 }}>
-			<div class="row">
-				<div class="col-3">
-					<div class="input-group flex-nowrap">
-						<span class="input-group-text" id="addon-wrapping">@</span>
-						<input bind:value={user_email} type="email" class="form-control" placeholder="Email Address" aria-label="Email Address" aria-describedby="addon-wrapping" />
+	{#if !isRegistering}
+		{#if isAbleToRegister}
+			<div transition:slide|local={{ duration: 500 }}>
+				<div class="row">
+					<div class="col-3">
+						<div class="input-group flex-nowrap">
+							<span class="input-group-text" id="addon-wrapping">@</span>
+							<input bind:value={user_email} type="email" class="form-control" placeholder="Email Address" aria-label="Email Address" aria-describedby="addon-wrapping" />
+						</div>
 					</div>
-				</div>
-				<div class="col-3">
-					<div class="input-group flex-nowrap">
-						<span class="input-group-text" id="addon-wrapping"><i class="bi bi-three-dots" /></span>
-						<input bind:value={user_password} type="password" class="form-control" placeholder="Password" aria-label="Password" aria-describedby="addon-wrapping" />
+					<div class="col-3">
+						<div class="input-group flex-nowrap">
+							<span class="input-group-text" id="addon-wrapping"><i class="bi bi-three-dots" /></span>
+							<input bind:value={user_password} type="password" class="form-control" placeholder="Password" aria-label="Password" aria-describedby="addon-wrapping" />
+						</div>
 					</div>
-				</div>
-				<div class="col-3">
-					<div class="input-group flex-nowrap">
-						<span class="input-group-text" id="addon-wrapping"><i class="bi bi-person" /></span>
-						<input bind:value={user_givenName} type="text" class="form-control" placeholder="Given Name" aria-label="Given Name" aria-describedby="addon-wrapping" />
+					<div class="col-3">
+						<div class="input-group flex-nowrap">
+							<span class="input-group-text" id="addon-wrapping"><i class="bi bi-person" /></span>
+							<input bind:value={user_givenName} type="text" class="form-control" placeholder="Given Name" aria-label="Given Name" aria-describedby="addon-wrapping" />
+						</div>
 					</div>
-				</div>
-				<div class="col-3">
-					<div class="input-group flex-nowrap">
-						<span class="input-group-text" id="addon-wrapping"><i class="bi bi-person" /></span>
-						<input bind:value={user_familyName} type="text" class="form-control" placeholder="Family Name" aria-label="Family Name" aria-describedby="addon-wrapping" />
+					<div class="col-3">
+						<div class="input-group flex-nowrap">
+							<span class="input-group-text" id="addon-wrapping"><i class="bi bi-person" /></span>
+							<input bind:value={user_familyName} type="text" class="form-control" placeholder="Family Name" aria-label="Family Name" aria-describedby="addon-wrapping" />
+						</div>
 					</div>
-				</div>
 
-				<div class="col-12 mt-3">
-					<div class="btn-group" role="group" aria-label="Basic example">
-						<button on:click={login} type="button" class="btn btn-outline-success">Register Account</button>
-						<button
-							on:click={(e) => {
-								isAbleToRegister = false;
-								masterKey_input = '';
-							}}
-							type="button"
-							class="btn btn-outline-danger">Cancel</button
-						>
+					<div class="col-12 mt-3">
+						<div class="btn-group" role="group" aria-label="Basic example">
+							<button on:click={login} type="button" class="btn btn-outline-success">Register Account</button>
+							<button
+								on:click={(e) => {
+									isAbleToRegister = false;
+									masterKey_input = '';
+								}}
+								type="button"
+								class="btn btn-outline-danger">Cancel</button
+							>
+						</div>
 					</div>
 				</div>
 			</div>
-		</div>
+		{:else}
+			<div transition:slide|local={{ duration: 500 }}>
+				<div class="row row-cols-2">
+					<div class="col" />
+					<div class="col">
+						<div class="input-group flex-nowrap">
+							<span class="input-group-text" id="addon-wrapping">Master Key</span>
+							<input on:keyup={validateMasterKey} bind:value={masterKey_input} type="password" class="form-control" placeholder="Master Key" aria-label="Master Key" aria-describedby="addon-wrapping" />
+						</div>
+					</div>
+				</div>
+			</div>
+		{/if}
 	{:else}
-		<div transition:slide|local={{ duration: 500 }}>
-			<div class="row row-cols-2">
-				<div class="col" />
-				<div class="col">
-					<div class="input-group flex-nowrap">
-						<span class="input-group-text" id="addon-wrapping">Master Key</span>
-						<input on:keyup={validateMasterKey} bind:value={masterKey_input} type="password" class="form-control" placeholder="Master Key" aria-label="Master Key" aria-describedby="addon-wrapping" />
-					</div>
-				</div>
-			</div>
-		</div>
+		<p>Loading</p>
 	{/if}
 </main>
 
