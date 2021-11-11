@@ -52,7 +52,7 @@
 				<tbody>
 					{#each items as item, index}
 						{#if !item.isArchived}
-							<tr class="align-middle" in:fly={{ y: 20, duration: 500, delay: 100 + index * 50 }}>
+							<tr class="align-middle" in:fly={{ y: -20, duration: 200, delay: 50 + index * 20 }}>
 								<td>{item.item_code}</td>
 								<td>{item.item_name}</td>
 								<td>{item.added_by.split('@')[0]}</td>

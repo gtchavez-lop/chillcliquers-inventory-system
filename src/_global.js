@@ -6,6 +6,7 @@ const supabase_key = import.meta.env.VITE_SUPABASE_KEY;
 
 export const supabase = createClient(supabase_url, supabase_key);
 export const activeTab = writable(1);
+export const masterKey = writable("admin1234");
 export const inventory_activeTab = writable(1);
 export const inventory_selectedItemToEdit = writable("");
 export const inventory_itemCategory = [
@@ -24,6 +25,7 @@ export const inventory_itemCategory = [
         "Thermo Gun",
         "Clamp Tester",
         "Assorted Hand Tools",
+        "Others"
       ],
     },
   },
@@ -45,6 +47,7 @@ export const inventory_itemCategory = [
         "Refrigerant Tank",
         "Metal Saw",
         "Cut-off Machine",
+        "Others"
       ],
       equipment: {
         copperPiping: [
@@ -111,6 +114,7 @@ export const inventory_itemCategory = [
         "Tube Cutter",
         "Nitrogen Tank",
         "Refrigirant Tank",
+        "Others"
       ],
       assortedHandTools: [
         "Phillip Screwdriver",
