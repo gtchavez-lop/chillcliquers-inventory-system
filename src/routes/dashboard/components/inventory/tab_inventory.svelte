@@ -57,9 +57,8 @@
 								<td>{item.item_name}</td>
 								<td>{item.added_by.split('@')[0]}</td>
 								<td>{item.item_count}</td>
-								<td style="text-transform: uppercase;">{item.category}</td>
-
-								<td style="text-transform: uppercase;">{item.item_type}</td>
+								<td>{item.category}</td>
+								<td>{item.item_type}</td>
 								<td>
 									<div class="btn-group" role="group">
 										<button

@@ -1,7 +1,7 @@
 <script>
 	import Quagga from 'quagga';
 	import { afterUpdate, onMount } from 'svelte';
-	import { inventory_selectedItemToEdit, supabase, inventory_activeTab } from '../../../../_global';
+	import { inventory_selectedItemToEdit, supabase, inventory_itemCategory } from '../../../../_global';
 	import { slide, fly, fade } from 'svelte/transition';
 	import Toast from 'svelte-toast';
 
@@ -15,9 +15,11 @@
 	$: isArchived = false;
 	$: itemCode = '';
 	$: itemName = '';
-	$: itemCategory = 'others';
+	$: itemCategory = 'Installation';
+	$: itemType = '';
 	$: itemCount = 0;
 	$: itemExistingInDatabase = true;
+	$: typeSelectorEnabled = false;
 
 	let getData = async (e) => {
 		let { data: inventory, error } = await supabase.from('inventory').select('*');
@@ -115,10 +117,12 @@
 			itemName = thisItem.item_name;
 			itemCount = thisItem.item_count;
 			itemCategory = thisItem.category;
+			itemType = thisItem.item_type;
 			itemExistingInDatabase = true;
 		} else {
 			itemName = '';
 			itemCount = '';
+			itemType = '';
 			itemExistingInDatabase = false;
 			isArchived = false;
 			actionsDisabled = false;
@@ -217,7 +221,8 @@
 				.update({
 					item_count: itemCount,
 					item_name: itemName,
-					category: itemCategory
+					category: itemCategory,
+					item_type: itemType,
 				})
 				.eq('item_code', itemCode)
 				.eq('isArchived', 'false');
@@ -327,48 +332,65 @@
 						<input bind:value={itemCount} type="number" class="form-control text-end" aria-label="Item Count" />
 					</div>
 					<div class="input-group mb-3">
-						<span class="input-group-text">Item Category</span>
-						<input type="text" class="form-control" readonly style="text-transform:capitalize" bind:value={itemCategory} aria-label="Text input with dropdown button" />
+						<input type="text" class="form-control" readonly bind:value={itemCategory} aria-label="Text input with dropdown button" />
 						<button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">Select Category</button>
 						<ul class="dropdown-menu dropdown-menu-end">
-							<li>
-								<button
-									on:click={(e) => {
-										itemCategory = 'cleaning';
-									}}
-									class="btn btn-outline text-start"
-									style="width:100%">Service Cleaning</button
-								>
-							</li>
-							<li>
-								<button
-									on:click={(e) => {
-										itemCategory = 'installation';
-									}}
-									class="btn btn-outline text-start"
-									style="width:100%">Installation</button
-								>
-							</li>
-							<li>
-								<button
-									on:click={(e) => {
-										itemCategory = 'repairs';
-									}}
-									class="btn btn-outline text-start"
-									style="width:100%">Repairs</button
-								>
-							</li>
-							<li>
-								<button
-									on:click={(e) => {
-										itemCategory = 'others';
-									}}
-									class="btn btn-outline text-start"
-									style="width:100%">Others</button
-								>
-							</li>
+							{#each inventory_itemCategory as category}
+								<li class="dropdown-item" on:click={() => (itemCategory = category.category)}>{category.category}</li>
+							{/each}
 						</ul>
 					</div>
+					<div class="input-group dropup dropstart">
+						<input type="text" class="form-control" readonly bind:value={itemType} aria-label="Text input with dropdown button" />
+						<button class="btn btn-outline-secondary dropdown-toggle dropup" type="button" on:click={e => {typeSelectorEnabled = !typeSelectorEnabled}}>Select Type</button>
+					</div>
+
+					{#if typeSelectorEnabled}
+						<div class="row px-3" transition:slide={{duration: 500}}>
+							{#each inventory_itemCategory as category}
+								{#if category.category == itemCategory && itemCategory == 'Service Cleaning'}
+									{#each category.types.general as generalType}
+										<span class="btn btn-outline-secondary col-6 rounded-none" on:click={() => {itemType = generalType; typeSelectorEnabled = false}}>{generalType}</span>
+									{/each}
+								{/if}
+								{#if category.category == itemCategory && itemCategory == 'Installation'}
+									{#each category.types.general as generalType}
+										<span class="btn btn-outline-secondary col-6 rounded-none" on:click={() => {itemType = generalType; typeSelectorEnabled = false}}>{generalType}</span>
+									{/each}
+									<div class="col-12"><hr></div>
+									{#each category.types.powerTools as powerTools}
+										<span class="btn btn-outline-secondary col-6 rounded-none align-middle" on:click={() => {itemType = powerTools; typeSelectorEnabled = false}}>{powerTools}</span>
+									{/each}
+									<div class="col-12"><hr></div>
+									{#each category.types.equipment.copperPiping as copperPiping}
+										<span class="btn btn-outline-secondary col-6 rounded-none align-middle" on:click={() => {itemType = copperPiping; typeSelectorEnabled = false}}>{copperPiping}</span>
+									{/each}
+									<div class="col-12"><hr></div>
+									{#each category.types.equipment.brackets as brackets}
+										<span class="btn btn-outline-secondary col-6 rounded-none align-middle" on:click={() => {itemType = brackets; typeSelectorEnabled = false}}>{brackets}</span>
+									{/each}
+									<div class="col-12"><hr></div>
+									{#each category.types.equipment.handTools as handTools}
+										<span class="btn btn-outline-secondary col-6 rounded-none align-middle" on:click={() => {itemType = handTools; typeSelectorEnabled = false}}>{handTools}</span>
+									{/each}
+									<div class="col-12"><hr></div>
+									{#each category.types.equipment.others as others}
+										<span class="btn btn-outline-secondary col-6 rounded-none align-middle" on:click={() => {itemType = others; typeSelectorEnabled = false}}>{others}</span>
+									{/each}
+								{/if}
+								{#if category.category == itemCategory && itemCategory == 'Repair'}
+									{#each category.types.general as generalType}
+										<span class="btn btn-outline-secondary col-6 rounded-none" on:click={() => {itemType = generalType; typeSelectorEnabled = false}}>{generalType}</span>
+									{/each}
+									<div class="col-12"><hr></div>
+									{#each category.types.assortedHandTools as assortedHandTools}
+										<span class="btn btn-outline-secondary col-6 rounded-none" on:click={() => {itemType = assortedHandTools; typeSelectorEnabled = false}}>{assortedHandTools}</span>
+									{/each}
+								{/if}
+							{/each}
+
+						</div>
+					{/if}
 				</div>
 			{/if}
 
