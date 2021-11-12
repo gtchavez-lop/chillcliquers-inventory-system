@@ -85,7 +85,7 @@
 		&:hover {
 			width: 250px;
 			li {
-				min-width: 150px;
+				min-width: 200px;
 			}
 		}
 

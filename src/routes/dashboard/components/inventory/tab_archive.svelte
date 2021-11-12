@@ -1,7 +1,8 @@
 <script>
-	import { onMount, setContext } from 'svelte';
-	import { fly, fade } from 'svelte/transition';
-	import { inventory_activeTab, supabase, inventory_selectedItemToEdit } from '../../../../_global';
+	import { onMount } from 'svelte';
+	import { fly } from 'svelte/transition';
+	import { supabase } from '../../../../_global';
+	import Toastify from 'toastify-js';
 
 	let items = [];
 	let loaded = false;
@@ -26,6 +27,16 @@
 		if (!error) {
 			items = [...inventory];
 			getData();
+			Toastify({
+				text: 'Item Restored',
+				gravity: 'bottom',
+				position: 'right',
+				backgroundColor: '#15C39A',
+				style: {
+					width: '300px',
+					color: '#000'
+				}
+			}).showToast();
 		} else {
 			alert(JSON.stringify(error));
 		}
@@ -36,6 +47,16 @@
 		if (!error) {
 			items = [...inventory];
 			getData();
+			Toastify({
+				text: 'Item Removed',
+				gravity: 'bottom',
+				position: 'right',
+				backgroundColor: '#F0583C',
+				style: {
+					width: '300px',
+					color: '#fff'
+				}
+			}).showToast();
 		} else {
 			alert(JSON.stringify(error));
 		}

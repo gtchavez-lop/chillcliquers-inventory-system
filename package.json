@@ -12,6 +12,7 @@
 		"@supabase/supabase-js": "^1.25.2",
 		"@sveltejs/adapter-vercel": "next",
 		"@sveltejs/kit": "next",
+		"@zerodevx/svelte-toast": "^0.6.2",
 		"eslint": "^7.32.0",
 		"eslint-config-prettier": "^8.3.0",
 		"eslint-plugin-svelte3": "^3.2.1",
@@ -26,6 +27,8 @@
 	"dependencies": {
 		"dayjs": "^1.10.7",
 		"quagga": "^0.12.1",
-		"svelte-toast": "^1.0.0"
+		"svelte-toast": "^1.0.0",
+		"toast-me": "^1.3.5",
+		"toastify-js": "^1.11.2"
 	}
 }

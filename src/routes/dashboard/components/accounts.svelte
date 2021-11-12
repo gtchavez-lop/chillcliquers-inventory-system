@@ -61,6 +61,7 @@
 	};
 </script>
 
+<embed in:fly={{ x: -40, duration: 500, delay: 100 }} src="./illustration-frosted/SVG/art(6).svg" />
 <main class="container p-5 text-end" in:fly={{ x: -20, duration: 500 }}>
 	<h1 class="mb-5">Accounts</h1>
 
@@ -160,4 +161,11 @@
 </main>
 
 <style>
+	embed {
+		position: fixed;
+		right: 50px;
+		top: -10px;
+		z-index: -1;
+		height: 250px;
+	}
 </style>

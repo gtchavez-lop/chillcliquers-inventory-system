@@ -3,10 +3,8 @@
 	import { afterUpdate, onMount } from 'svelte';
 	import { inventory_selectedItemToEdit, supabase, inventory_itemCategory } from '../../../../_global';
 	import { slide, fly, fade } from 'svelte/transition';
-	import Toast from 'svelte-toast';
-
-	const toast = '';
-	$: items = [];
+	import Toastify from 'toastify-js';
+	import { readable } from 'svelte/store';
 
 	let scanner;
 	$: scannerOpen = false;
@@ -21,19 +19,31 @@
 	$: itemExistingInDatabase = true;
 	$: typeSelectorEnabled = false;
 
-	let getData = async (e) => {
-		let { data: inventory, error } = await supabase.from('inventory').select('*');
-		items = [...inventory];
+	const inventoryItems = readable(null, (set) => {
+		supabase
+			.from('inventory')
+			.select('*')
+			.then(({ data, error }) => set(data));
 
-		if ($inventory_selectedItemToEdit != '') {
-			itemCode = $inventory_selectedItemToEdit;
-			findItem(itemCode);
-			inventory_selectedItemToEdit.set('');
-		}
-	};
+		const thisSubscription = supabase
+			.from('inventory')
+			.on('*', (payload) => {
+				if (payload.eventType === 'INSERT') {
+					set([...get(inventoryItems), payload]);
+				}
+				if (payload.eventType === 'UPDATE') {
+					let index = $inventoryItems.findIndex((thisitem) => thisitem.id === payload.new.id);
+					let oldData = $inventoryItems;
+					oldData[index] = payload.new;
+					set(oldData);
+					console.log($inventoryItems);
+				}
+			})
+			.subscribe();
 
-	onMount(async (e) => {
-		getData();
+		return () => {
+			supabase.removeSubscription(thisSubscription);
+		};
 	});
 
 	let openScanner = (e) => {
@@ -81,7 +91,7 @@
 	Quagga.onDetected((result) => {
 		itemCode = result.codeResult.code;
 
-		let thisItem = items.find((item) => item.item_code == itemCode);
+		let thisItem = $inventoryItems.find((item) => item.item_code == itemCode);
 		if (thisItem) {
 			if (thisItem.isArchived) {
 				isArchived = true;
@@ -104,34 +114,8 @@
 		}
 	});
 
-	const findItem = (inputCode) => {
-		let thisItem = items.find((item) => item.item_code == inputCode);
-
-		if (thisItem) {
-			if (thisItem.isArchived) {
-				isArchived = true;
-				actionsDisabled = true;
-			} else {
-				isArchived = false;
-				actionsDisabled = false;
-			}
-			itemName = thisItem.item_name;
-			itemCount = thisItem.item_count;
-			itemCategory = thisItem.category;
-			itemType = thisItem.item_type;
-			itemExistingInDatabase = true;
-		} else {
-			itemName = '';
-			itemCount = '';
-			itemType = '';
-			itemExistingInDatabase = false;
-			isArchived = false;
-			actionsDisabled = false;
-		}
-	};
-
 	const manualInput_code = (e) => {
-		let thisItem = items.find((item) => item.item_code == itemCode);
+		let thisItem = $inventoryItems.find((item) => item.item_code == itemCode);
 		if (itemCode.length < 1) {
 			itemExistingInDatabase = false;
 		} else {
@@ -163,7 +147,9 @@
 			return;
 		} else {
 			actionsDisabled = true;
-			itemCount = 1;
+			if (itemCount < 1) {
+				itemCount = 1;
+			}
 			let { data: inventory, error } = await supabase.from('inventory').insert({
 				item_code: itemCode,
 				item_name: itemName,
@@ -176,11 +162,20 @@
 				alert(error.message);
 				console.log(error);
 			} else {
+				Toastify({
+					text: `${itemName} added`,
+					gravity: 'bottom',
+					position: 'right',
+					backgroundColor: '#15C39A',
+					style: {
+						minWidth: '300px',
+						color: '#000'
+					}
+				}).showToast();
 				itemCode = '';
 				itemName = '';
 				itemCount = '';
 				closeScanner();
-				getData();
 				actionsDisabled = false;
 			}
 		}
@@ -205,8 +200,17 @@
 				itemCode = '';
 				itemName = '';
 				itemCount = 0;
+				Toastify({
+					text: 'Item Updated',
+					gravity: 'bottom',
+					position: 'right',
+					backgroundColor: '#15C39A',
+					style: {
+						width: '300px',
+						color: '#000'
+					}
+				}).showToast();
 				closeScanner();
-				getData();
 				actionsDisabled = false;
 			}
 		}
@@ -236,29 +240,17 @@
 				itemCount = '';
 				itemCategory = 'others';
 				closeScanner();
-				getData();
 				actionsDisabled = false;
-			}
-		}
-	};
-
-	const removeItem = async (e) => {
-		if (!itemCode || !itemName || !itemCount) {
-			alert('Please fill out all fields');
-			return;
-		} else {
-			actionsDisabled = true;
-			let { data, error } = await supabase.from('inventory').delete().eq('item_code', itemCode);
-			if (error) {
-				console.log(error);
-			} else {
-				itemCode = '';
-				itemName = '';
-				itemCount = 0;
-				closeScanner();
-				getData();
-				actionsDisabled = false;
-				isRemoving = false;
+				Toastify({
+					text: 'Item Updated',
+					gravity: 'bottom',
+					position: 'right',
+					backgroundColor: '#15C39A',
+					style: {
+						width: '300px',
+						color: '#000'
+					}
+				}).showToast();
 			}
 		}
 	};
@@ -282,8 +274,17 @@
 				itemName = '';
 				itemCount = 0;
 				itemCategory = '';
+				Toastify({
+					text: 'Item Archived',
+					gravity: 'bottom',
+					position: 'right',
+					backgroundColor: '#FFC107',
+					style: {
+						width: '300px',
+						color: '#FFFFFF'
+					}
+				}).showToast();
 				closeScanner();
-				getData();
 				actionsDisabled = false;
 				isRemoving = false;
 			}
@@ -295,10 +296,10 @@
 	<h3>Scan Item</h3>
 
 	<div class="row mt-5">
-		<div class="col-6">
+		<div class="col-12 col-md-6 ">
 			<div bind:this={scanner} style="border-radius: 20px;" />
 		</div>
-		<div class="col-6">
+		<div class="col-12 col-md-6">
 			<div class="d-flex flex-column mb-4">
 				{#if !scannerOpen}
 					<button on:click={openScanner} type="button" class="btn btn-outline-dark ">Open Scanner</button>
@@ -331,7 +332,7 @@
 					</div>
 					<div class="input-group mb-3">
 						<span class="input-group-text">Item/s in inventory</span>
-						<input bind:value={itemCount} type="number" class="form-control text-end" aria-label="Item Count" />
+						<input bind:value={itemCount} min="0" type="number" class="form-control text-end" aria-label="Item Count" />
 					</div>
 					<div class="input-group mb-3">
 						<input type="text" class="form-control" readonly bind:value={itemCategory} aria-label="Text input with dropdown button" />
@@ -354,7 +355,7 @@
 					</div>
 
 					{#if typeSelectorEnabled}
-						<div class="row px-3" transition:slide={{ duration: 500 }}>
+						<div class="selector row px-3" transition:slide={{ duration: 500 }}>
 							{#each inventory_itemCategory as category}
 								{#if category.category == itemCategory && itemCategory == 'Service Cleaning'}
 									{#each category.types.general as generalType}
@@ -492,3 +493,11 @@
 		</div>
 	</div>
 </main>
+
+<style>
+	main {
+		overflow: hidden;
+		overflow-y: scroll;
+		max-height: 60vh;
+	}
+</style>

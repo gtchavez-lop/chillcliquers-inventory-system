@@ -3,6 +3,7 @@
 	import { slide } from 'svelte/transition';
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
+	import { SvelteToast } from '@zerodevx/svelte-toast';
 
 	let email = '';
 	let password = '';
@@ -51,6 +52,9 @@
 	};
 </script>
 
+<!-- toast container -->
+<SvelteToast />
+
 <!-- Login Screen -->
 <main class="d-flex flex-column justify-content-center align-items-center ">
 	{#if !isProceeding}
@@ -74,30 +78,14 @@
 							<span class="input-group-text" id="addon-wrapping">
 								<i class="bi bi-person" />
 							</span>
-							<input
-								type="email"
-								class="form-control"
-								placeholder="Email"
-								aria-label="Email"
-								aria-describedby="addon-wrapping"
-								bind:value={email}
-							/>
+							<input type="email" class="form-control" placeholder="Email" aria-label="Email" aria-describedby="addon-wrapping" bind:value={email} />
 						</div>
 						<div class="input-group flex-nowrap">
 							<span class="input-group-text" id="addon-wrapping"><i class="bi bi-lock" /></span>
-							<input
-								type="password"
-								class="form-control"
-								placeholder="Password"
-								aria-label="Password"
-								aria-describedby="addon-wrapping"
-								bind:value={password}
-							/>
+							<input type="password" class="form-control" placeholder="Password" aria-label="Password" aria-describedby="addon-wrapping" bind:value={password} />
 						</div>
 					</div>
-					<button on:click={logInWithEmailPassword} class="btn btn-primary mt-5">
-						Log In with Email and Password
-					</button>
+					<button on:click={logInWithEmailPassword} class="btn btn-primary mt-5"> Log In with Email and Password </button>
 				</div>
 			</div>
 		{/if}
