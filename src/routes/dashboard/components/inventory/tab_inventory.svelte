@@ -1,44 +1,18 @@
 <script>
 	import { onMount, setContext } from 'svelte';
 	import { fly, fade } from 'svelte/transition';
-	import { inventory_activeTab, supabase, inventory_selectedItemToEdit } from '../../../../_global';
+	import { inventory_activeTab, supabase, inventory_selectedItemToEdit, inventoryItems } from '../../../../_global';
 	import Toastify from 'toastify-js';
-	import { get, readable } from 'svelte/store';
+	import { byString, byNumber, byValue } from 'sort-es';
 
-	let items = [];
-	let loaded = false;
 	let selectedItem;
+	let searchInput = '';
+	let searchMode = false;
+	let searchedItems = [];
+	let sorted = [];
 
-	onMount(async (e) => {
-		getData();
-	});
-
-	const inventoryItems = readable(null, (set) => {
-		supabase
-			.from('inventory')
-			.select('*')
-			.then(({ data, error }) => set(data));
-
-		const thisSubscription = supabase
-			.from('inventory')
-			.on('*', (payload) => {
-				if (payload.eventType === 'INSERT') {
-					set([...get(inventoryItems), payload]);
-				}
-				if (payload.eventType === 'UPDATE') {
-					let index = $inventoryItems.findIndex((thisitem) => thisitem.id === payload.new.id);
-					let oldData = $inventoryItems;
-					oldData[index] = payload.new;
-					set(oldData);
-					console.log($inventoryItems);
-				}
-			})
-			.subscribe();
-
-		return () => {
-			supabase.removeSubscription(thisSubscription);
-		};
-	});
+	let sortBy = 'Name';
+	let sortOrder = 'asc';
 
 	const archiveItem = async (e) => {
 		let { data, error } = await supabase
@@ -47,99 +21,269 @@
 				isArchived: true
 			})
 			.eq('item_code', selectedItem);
-		if (!error) {
-			getData();
-			Toastify({
-				text: 'Item Archived',
-				gravity: 'bottom',
-				position: 'right',
-				backgroundColor: '#FFC107',
-				style: {
-					width: '300px',
-					color: '#FFFFFF'
+		if (error) return;
+
+		Toastify({
+			text: 'Item Archived',
+			gravity: 'bottom',
+			position: 'right',
+			style: {
+				background: '#FFC107',
+				width: '300px',
+				color: '#FFFFFF'
+			}
+		}).showToast();
+		searchedItems = [];
+		$inventoryItems.forEach((item) => {
+			if (
+				item.item_code.toLowerCase().includes(searchInput) ||
+				item.item_code.includes(searchInput) ||
+				item.item_name.toLowerCase().includes(searchInput) ||
+				item.item_name.includes(searchInput) ||
+				item.added_by.toLowerCase().includes(searchInput) ||
+				item.added_by.includes(searchInput) ||
+				item.category.toLowerCase().includes(searchInput) ||
+				item.category.includes(searchInput) ||
+				item.item_type.toLowerCase().includes(searchInput) ||
+				item.item_type.includes(searchInput)
+			) {
+				searchedItems = [...searchedItems, item];
+			}
+		});
+	};
+
+	const searchItem = async (e) => {
+		if (searchInput) {
+			searchMode = true;
+			searchedItems = [];
+			$inventoryItems.forEach((item) => {
+				if (
+					item.item_code.toLowerCase().includes(searchInput) ||
+					item.item_code.includes(searchInput) ||
+					item.item_name.toLowerCase().includes(searchInput) ||
+					item.item_name.includes(searchInput) ||
+					item.added_by.toLowerCase().includes(searchInput) ||
+					item.added_by.includes(searchInput) ||
+					item.category.toLowerCase().includes(searchInput) ||
+					item.category.includes(searchInput) ||
+					item.item_type.toLowerCase().includes(searchInput) ||
+					item.item_type.includes(searchInput)
+				) {
+					searchedItems = [...searchedItems, item];
 				}
-			}).showToast();
+			});
+		} else {
+			searchedItems = $inventoryItems;
 		}
 	};
+
+	onMount(async (e) => {
+		if ($inventoryItems) {
+			loaded = true;
+		} else return;
+	});
 </script>
 
 <main class="mt-5" in:fly={{ y: 40, duration: 500 }}>
 	<h3>Inventory List</h3>
-	<div class="scroller mt-5">
-		{#if $inventoryItems}
-			{#if $inventoryItems.length > 0}
-				<table class="text-start table" style="user-select: text;" in:fly|local={{ y: 40, duration: 500, delay: 200 }}>
-					<thead style="position: sticky; top: 0; z-index-2" class="bg-light">
-						<tr>
-							<th scope="col">Item Code</th>
-							<th scope="col">Item Name</th>
-							<th scope="col">Added By</th>
-							<th scope="col">Item stored</th>
-							<th scope="col">Item Category</th>
-							<th scope="col">Item Type</th>
-							<th scope="col" style="z-index-2">Actions</th>
-						</tr>
-					</thead>
-					<tbody style="z-index: -1;">
-						{#each $inventoryItems as { item_code, item_name, added_by, item_count, category, item_type, isArchived }, index}
-							{#if !isArchived}
+
+	<div class="input-group mt-5 w-75">
+		<span class="input-group-text" id="inputGroup-sizing-sm">Search</span>
+		<input
+			on:keypress={(e) => {
+				if (e.key === 'Enter') {
+					searchItem();
+				}
+			}}
+			bind:value={searchInput}
+			on:input={searchItem}
+			type="text"
+			class="form-control"
+			placeholder="By code, name, category, type, or added by"
+			aria-label="Recipient's username"
+			aria-describedby="button-addon2"
+		/>
+		<!-- <button class="btn btn-outline-primary dropdown-toggle" data-bs-toggle="dropdown" type="button" id="button-addon2">{sortBy}</button>
+		<ul class="dropdown-menu dropdown-menu-end">
+			<li><button class="btn w-100 text-end" on:click={() => (sortBy = 'Code')}>Code</button></li>
+			<li><button class="btn w-100 text-end" on:click={() => (sortBy = 'Name')}>Name</button></li>
+			<li><button class="btn w-100 text-end" on:click={() => (sortBy = 'Added By')}>Added By</button></li>
+			<li><button class="btn w-100 text-end" on:click={() => (sortBy = 'Category')}>Item Category</button></li>
+			<li><button class="btn w-100 text-end" on:click={() => (sortBy = 'Type')}>Item Type</button></li>
+		</ul> -->
+		<!-- <button class="btn btn-outline-primary dropdown-toggle" data-bs-toggle="dropdown" type="button" id="button-addon2">
+			{#if sortOrder === 'asc'}
+				Ascending
+			{/if}
+			{#if sortOrder === 'dsc'}
+				Descending
+			{/if}
+		</button>
+		<ul class="dropdown-menu dropdown-menu-end">
+			<li><button class="btn w-100 text-end" on:click={() => (sortOrder = 'asc')}>Ascending</button></li>
+			<li><button class="btn w-100 text-end" on:click={() => (sortOrder = 'dsc')}>Descending</button></li>
+		</ul> -->
+	</div>
+	<div class="scroller mt-3">
+		{#if searchMode}
+			{#if searchedItems}
+				{#if searchedItems.length > 0}
+					<table class="text-start table" style="user-select: text;" in:fly|local={{ y: 40, duration: 500, delay: 200 }}>
+						<thead style="position: sticky; top: 0; z-index: 2;" class="bg-light">
+							<tr>
+								<th scope="col">Item Code</th>
+								<th scope="col">Item Name</th>
+								<th scope="col">Added By</th>
+								<th scope="col">Item stored</th>
+								<th scope="col">Item Category</th>
+								<th scope="col">Item Type</th>
+								<th scope="col" style="z-index-2">Actions</th>
+							</tr>
+						</thead>
+						<tbody style="z-index: -1;">
+							{#each searchedItems as { item_code, item_name, added_by, item_count, category, item_type, isArchived, item_borrowCount }, index}
 								<tr class="align-middle" in:fly={{ y: -20, duration: 200, delay: 50 + index * 20 }}>
 									<td>{item_code}</td>
 									<td>{item_name}</td>
 									<td>{added_by ? added_by.split('@')[0] : ''}</td>
-									<td>{item_count}</td>
+									<td>{item_count - item_borrowCount}</td>
 									<td>{category}</td>
 									<td>{item_type}</td>
-									<td style="z-index: 1;">
-										<div class="btn-group" role="group">
-											<button
-												data-bs-toggle="tooltip"
-												data-bs-placement="left"
-												title="Archive Item"
-												class="btn btn-outline-warning"
-												on:click={(e) => {
-													selectedItem = item_code;
-													archiveItem();
-												}}><i class="bi bi-archive" /></button
-											>
-											<button data-bs-toggle="tooltip" data-bs-placement="left" title="Edit Item" class="btn btn-outline-primary"
-												><i
-													class="bi bi-pen"
+
+									{#if !isArchived}
+										<td style="z-index: 1;">
+											<div class="btn-group" role="group">
+												<button
+													data-bs-toggle="tooltip"
+													data-bs-placement="left"
+													title="Archive Item"
+													class="btn btn-outline-warning"
+													on:click={(e) => {
+														selectedItem = item_code;
+														archiveItem();
+													}}><i class="bi bi-archive" /></button
+												>
+												<button
 													on:click={(e) => {
 														inventory_selectedItemToEdit.set(item_code);
 														inventory_activeTab.set(2);
 													}}
-												/></button
-											>
-											<button data-bs-toggle="tooltip" data-bs-placement="left" title="Borrow Item" class="btn btn-outline-primary"><i class="bi bi-arrow-return-right" /></button>
-										</div>
-									</td>
+													data-bs-toggle="tooltip"
+													data-bs-placement="left"
+													title="Edit Item"
+													class="btn btn-outline-primary"><i class="bi bi-pen" /></button
+												>
+												<button
+													on:click={(e) => {
+														inventory_selectedItemToEdit.set(item_code);
+														inventory_activeTab.set(3);
+													}}
+													data-bs-toggle="tooltip"
+													data-bs-placement="left"
+													title="Borrow Item"
+													class="btn btn-outline-primary"><i class="bi bi-arrow-return-right" /></button
+												>
+											</div>
+										</td>
+									{:else}
+										<td><span class="text-danger">Please Restore this Item to edit</span></td>
+									{/if}
 								</tr>
-							{/if}
-						{/each}
-					</tbody>
-				</table>
-			{:else}
-				<div in:fly|local={{ y: 40, duration: 500, delay: 200 }}>
-					<p class="lead mt-5">Seems like its empty</p>
+							{/each}
+						</tbody>
+					</table>
+				{:else}
+					<div in:fly|local={{ y: 40, duration: 500, delay: 200 }}>
+						<p class="lead mt-5">Seems like its empty</p>
+					</div>
+				{/if}
+			{/if}
+		{:else}
+			{#if $inventoryItems}
+				{#if $inventoryItems.length > 0}
+					<table class="text-start table" style="user-select: text;" in:fly|local={{ y: 40, duration: 500, delay: 200 }}>
+						<thead style="position: sticky; top: 0; z-index-2" class="bg-light text-start">
+							<tr>
+								<th scope="col">Item Code</th>
+								<th scope="col">Item Name</th>
+								<th scope="col">Added By</th>
+								<th scope="col">Item stored</th>
+								<th scope="col">Item Category</th>
+								<th scope="col">Item Type</th>
+								<th scope="col" style="z-index-2">Actions</th>
+							</tr>
+						</thead>
+						<tbody style="z-index: -1;">
+							{#each $inventoryItems as { item_code, item_name, added_by, item_count, category, item_type, isArchived, item_borrowCount }, index}
+								{#if !isArchived}
+									<tr class="align-middle" in:fly={{ y: -20, duration: 200, delay: 50 + index * 20 }}>
+										<td>{item_code}</td>
+										<td>{item_name}</td>
+										<td>{added_by ? added_by.split('@')[0] : ''}</td>
+										<td>{item_count - item_borrowCount}</td>
+										<td>{category}</td>
+										<td>{item_type}</td>
+										<td style="z-index: 1;">
+											<div class="btn-group" role="group">
+												<button
+													data-bs-toggle="tooltip"
+													data-bs-placement="left"
+													title="Archive Item"
+													class="btn btn-outline-warning"
+													on:click={(e) => {
+														selectedItem = item_code;
+														archiveItem();
+													}}><i class="bi bi-archive" /></button
+												>
+												<button
+													on:click={(e) => {
+														inventory_selectedItemToEdit.set(item_code);
+														inventory_activeTab.set(2);
+													}}
+													data-bs-toggle="tooltip"
+													data-bs-placement="left"
+													title="Edit Item"
+													class="btn btn-outline-primary"><i class="bi bi-pen" /></button
+												>
+												<button
+													on:click={(e) => {
+														inventory_selectedItemToEdit.set(item_code);
+														inventory_activeTab.set(3);
+													}}
+													data-bs-toggle="tooltip"
+													data-bs-placement="left"
+													title="Borrow Item"
+													class="btn btn-outline-primary"><i class="bi bi-arrow-return-right" /></button
+												>
+											</div>
+										</td>
+									</tr>
+								{/if}
+							{/each}
+						</tbody>
+					</table>
+				{:else}
+					<div in:fly|local={{ y: 40, duration: 500, delay: 200 }}>
+						<p class="lead mt-5">Seems like its empty</p>
+					</div>
+				{/if}
+			{/if}
+			{#if !$inventoryItems}
+				<div class="lds-ellipsis" in:fly={{ y: 40, duration: 500 }}>
+					<div />
+					<div />
+					<div />
+					<div />
 				</div>
 			{/if}
-		{/if}
-		{#if !$inventoryItems}
-			<div class="lds-ellipsis" in:fly={{ y: 40, duration: 500 }}>
-				<div />
-				<div />
-				<div />
-				<div />
-			</div>
 		{/if}
 	</div>
 </main>
 
 <style>
 	.scroller {
-		overflow-y: scroll;
-		height: 65vh;
+		overflow: auto;
+		max-height: 50vh;
 	}
 	.lds-ellipsis {
 		display: inline-block;

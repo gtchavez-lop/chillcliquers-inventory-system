@@ -34,6 +34,14 @@
 			<i class="bi bi-box-seam" />
 		</li>
 		<li
+			class={$activeTab == 4 ? 'active' : ''}
+			on:click={() => {
+				setActiveTab(4);
+			}}
+		>
+			<i class="bi bi-arrow-return-right" />
+		</li>
+		<li
 			class={$activeTab == 3 ? 'active' : ''}
 			on:click={() => {
 				setActiveTab(3);
@@ -43,9 +51,9 @@
 		</li>
 		<hr style="margin: 2em 0;" />
 		<li
-			class={$activeTab == 4 ? 'active' : ''}
+			class={$activeTab == 5 ? 'active' : ''}
 			on:click={() => {
-				setActiveTab(4);
+				setActiveTab(5);
 			}}
 		>
 			<i class="bi bi-gear" />
@@ -190,6 +198,15 @@
 			background: rgb(43, 95, 192);
 			border-radius: 100px;
 			opacity: 1;
+		}
+	}
+
+	@media screen and (max-width: 768px) {
+		main {
+			left: -55px;
+			&:hover {
+				left: 0;
+			}
 		}
 	}
 </style>

@@ -8,6 +8,7 @@
 	import TabInventory from './inventory/tab_inventory.svelte';
 	import TabAddItem from './inventory/tab_addItem.svelte';
 	import TabArchive from './inventory/tab_archive.svelte';
+	import TabBorrowItem from './inventory/tab_borrowedItems.svelte';
 
 	$: tab = $inventory_activeTab;
 </script>
@@ -26,7 +27,10 @@
 				<label class="btn btn-outline-dark" for="btnradio2">Scan Item</label>
 
 				<input type="radio" class="btn-check" name="btnradio" id="btnradio3" autocomplete="off" checked={tab == 3 ? true : false} on:click={() => inventory_activeTab.set(3)} />
-				<label class="btn btn-outline-warning" for="btnradio3">Archived Items</label>
+				<label class="btn btn-outline-dark" for="btnradio3">Borrow Items</label>
+
+				<input type="radio" class="btn-check" name="btnradio" id="btnradio4" autocomplete="off" checked={tab == 4 ? true : false} on:click={() => inventory_activeTab.set(4)} />
+				<label class="btn btn-outline-warning" for="btnradio4">Archived Items</label>
 			</div>
 		</div>
 	</div>
@@ -38,6 +42,9 @@
 		<svelte:component this={TabAddItem} />
 	{/if}
 	{#if tab == 3}
+		<svelte:component this={TabBorrowItem} />
+	{/if}
+	{#if tab == 4}
 		<svelte:component this={TabArchive} />
 	{/if}
 </main>

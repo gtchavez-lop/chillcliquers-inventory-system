@@ -1,10 +1,10 @@
 <script>
 	import Quagga from 'quagga';
 	import { afterUpdate, onMount } from 'svelte';
-	import { inventory_selectedItemToEdit, supabase, inventory_itemCategory } from '../../../../_global';
+	import { inventory_selectedItemToEdit, supabase, inventory_itemCategory, inventoryItems, inventory_activeTab } from '../../../../_global';
 	import { slide, fly, fade } from 'svelte/transition';
 	import Toastify from 'toastify-js';
-	import { readable } from 'svelte/store';
+	import { get, readable, writable } from 'svelte/store';
 
 	let scanner;
 	$: scannerOpen = false;
@@ -18,33 +18,6 @@
 	$: itemCount = 0;
 	$: itemExistingInDatabase = true;
 	$: typeSelectorEnabled = false;
-
-	const inventoryItems = readable(null, (set) => {
-		supabase
-			.from('inventory')
-			.select('*')
-			.then(({ data, error }) => set(data));
-
-		const thisSubscription = supabase
-			.from('inventory')
-			.on('*', (payload) => {
-				if (payload.eventType === 'INSERT') {
-					set([...get(inventoryItems), payload]);
-				}
-				if (payload.eventType === 'UPDATE') {
-					let index = $inventoryItems.findIndex((thisitem) => thisitem.id === payload.new.id);
-					let oldData = $inventoryItems;
-					oldData[index] = payload.new;
-					set(oldData);
-					console.log($inventoryItems);
-				}
-			})
-			.subscribe();
-
-		return () => {
-			supabase.removeSubscription(thisSubscription);
-		};
-	});
 
 	let openScanner = (e) => {
 		itemCode = '';
@@ -118,26 +91,26 @@
 		let thisItem = $inventoryItems.find((item) => item.item_code == itemCode);
 		if (itemCode.length < 1) {
 			itemExistingInDatabase = false;
+			return;
+		}
+
+		if (thisItem) {
+			isArchived = thisItem.isArchived;
+			isArchived ? (actionsDisabled = true) : (actionsDisabled = false);
+
+			itemCode = thisItem.item_code;
+			itemName = thisItem.item_name;
+			itemCount = thisItem.item_count;
+			itemCategory = thisItem.category;
+			itemType = thisItem.item_type;
+			itemExistingInDatabase = true;
 		} else {
-			if (thisItem) {
-				if (thisItem.isArchived) {
-					isArchived = true;
-					actionsDisabled = true;
-				} else {
-					isArchived = false;
-					actionsDisabled = false;
-				}
-				itemName = thisItem.item_name;
-				itemCount = thisItem.item_count;
-				itemCategory = thisItem.category;
-				itemExistingInDatabase = true;
-			} else {
-				itemName = '';
-				itemCount = '';
-				itemExistingInDatabase = false;
-				isArchived = false;
-				actionsDisabled = false;
-			}
+			itemName = '';
+			itemCategory = '';
+			itemType = '';
+			itemExistingInDatabase = false;
+			isArchived = false;
+			actionsDisabled = false;
 		}
 	};
 
@@ -145,74 +118,75 @@
 		if (!itemCode || !itemName) {
 			alert('Please fill out all fields');
 			return;
+		}
+
+		actionsDisabled = true;
+		if (itemCount < 1) {
+			itemCount = 1;
+		}
+		let { data: inventory, error } = await supabase.from('inventory').insert({
+			item_code: itemCode,
+			item_name: itemName,
+			item_count: itemCount,
+			category: itemCategory,
+			item_type: itemType,
+			added_by: await supabase.auth.user().email
+		});
+		if (error) {
+			alert(error.message);
+			console.log(error);
 		} else {
-			actionsDisabled = true;
-			if (itemCount < 1) {
-				itemCount = 1;
-			}
-			let { data: inventory, error } = await supabase.from('inventory').insert({
-				item_code: itemCode,
-				item_name: itemName,
-				item_count: itemCount,
-				category: itemCategory,
-				item_type: itemType,
-				added_by: await supabase.auth.user().email
-			});
-			if (error) {
-				alert(error.message);
-				console.log(error);
-			} else {
-				Toastify({
-					text: `${itemName} added`,
-					gravity: 'bottom',
-					position: 'right',
-					backgroundColor: '#15C39A',
-					style: {
-						minWidth: '300px',
-						color: '#000'
-					}
-				}).showToast();
-				itemCode = '';
-				itemName = '';
-				itemCount = '';
+			Toastify({
+				text: `${itemName} added`,
+				gravity: 'bottom',
+				position: 'right',
+				style: {
+					background: '#15C39A',
+					minWidth: '300px',
+					color: '#000'
+				}
+			}).showToast();
+			itemCode = '';
+			itemName = '';
+			itemCount = '';
+
+			if (scannerOpen) {
 				closeScanner();
-				actionsDisabled = false;
 			}
+			actionsDisabled = false;
 		}
 	};
 
 	const addOneItem = async (e) => {
-		if (!itemCode || !itemName || !itemCount) {
-			alert('Please fill out all fields');
-			return;
+		actionsDisabled = true;
+		let { data, error } = await supabase
+			.from('inventory')
+			.update({
+				item_count: itemCount + 1
+			})
+			.eq('item_code', itemCode)
+			.eq('isArchived', 'false');
+		if (error) {
+			console.log(error);
 		} else {
-			actionsDisabled = true;
-			let { data, error } = await supabase
-				.from('inventory')
-				.update({
-					item_count: itemCount + 1
-				})
-				.eq('item_code', itemCode)
-				.eq('isArchived', 'false');
-			if (error) {
-				console.log(error);
-			} else {
-				itemCode = '';
-				itemName = '';
-				itemCount = 0;
-				Toastify({
-					text: 'Item Updated',
-					gravity: 'bottom',
-					position: 'right',
-					backgroundColor: '#15C39A',
-					style: {
-						width: '300px',
-						color: '#000'
-					}
-				}).showToast();
+			itemCode = '';
+			itemName = '';
+			itemCount = 0;
+			Toastify({
+				text: 'Item Updated',
+				gravity: 'bottom',
+				position: 'right',
+				style: {
+					background: '#15C39A',
+					width: '300px',
+					color: '#000'
+				}
+			}).showToast();
+
+			if (scannerOpen) {
 				closeScanner();
-				actionsDisabled = false;
 			}
+			actionsDisabled = false;
 		}
 	};
 
@@ -238,15 +212,18 @@
 				itemCode = '';
 				itemName = '';
 				itemCount = '';
-				itemCategory = 'others';
-				closeScanner();
+				itemCategory = '';
+				itemType = '';
 				actionsDisabled = false;
+				if (scannerOpen) {
+					closeScanner();
+				}
 				Toastify({
 					text: 'Item Updated',
 					gravity: 'bottom',
 					position: 'right',
-					backgroundColor: '#15C39A',
 					style: {
+						backgroundColor: '#15C39A',
 						width: '300px',
 						color: '#000'
 					}
@@ -256,40 +233,57 @@
 	};
 
 	const archiveItem = async (e) => {
-		if (!itemCode || !itemName || !itemCount) {
-			alert('Please fill out all fields');
+		actionsDisabled = true;
+		let { data, error } = await supabase
+			.from('inventory')
+			.update({
+				isArchived: true
+			})
+			.eq('item_code', itemCode);
+
+		if (error) {
+			console.log(error);
 			return;
-		} else {
-			actionsDisabled = true;
-			let { data, error } = await supabase
-				.from('inventory')
-				.update({
-					isArchived: true
-				})
-				.eq('item_code', itemCode);
-			if (error) {
-				console.log(error);
-			} else {
-				itemCode = '';
-				itemName = '';
-				itemCount = 0;
-				itemCategory = '';
-				Toastify({
-					text: 'Item Archived',
-					gravity: 'bottom',
-					position: 'right',
-					backgroundColor: '#FFC107',
-					style: {
-						width: '300px',
-						color: '#FFFFFF'
-					}
-				}).showToast();
-				closeScanner();
-				actionsDisabled = false;
-				isRemoving = false;
-			}
 		}
+
+		itemCode = '';
+		itemName = '';
+		itemCount = 0;
+		itemCategory = '';
+		Toastify({
+			text: 'Item Archived',
+			gravity: 'bottom',
+			position: 'right',
+			style: {
+				backgroundColor: '#FFC107',
+				width: '300px',
+				color: '#FFFFFF'
+			}
+		}).showToast();
+		if (scannerOpen) {
+			closeScanner();
+		}
+		actionsDisabled = false;
+		isRemoving = false;
 	};
+
+	onMount(async (e) => {
+		if (!$inventory_selectedItemToEdit) {
+			return;
+		}
+
+		$inventoryItems.forEach((element) => {
+			if (element.item_code == $inventory_selectedItemToEdit) {
+				itemCode = element.item_code;
+				itemName = element.item_name;
+				itemCategory = element.category;
+				itemType = element.item_type;
+				itemCount = element.item_count;
+			}
+		});
+
+		inventory_selectedItemToEdit.set('');
+	});
 </script>
 
 <main class="mt-5" in:fly={{ y: 40, duration: 500 }}>
@@ -497,7 +491,7 @@
 <style>
 	main {
 		overflow: hidden;
-		overflow-y: scroll;
+		overflow-y: auto;
 		max-height: 60vh;
 	}
 </style>
