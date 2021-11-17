@@ -76,12 +76,6 @@
 			searchedItems = $inventoryItems;
 		}
 	};
-
-	onMount(async (e) => {
-		if ($inventoryItems) {
-			loaded = true;
-		} else return;
-	});
 </script>
 
 <main class="mt-5" in:fly={{ y: 40, duration: 500 }}>

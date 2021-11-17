@@ -2,13 +2,14 @@
 	import { onMount } from 'svelte';
 
 	import { slide, fly } from 'svelte/transition';
-	import { supabase, inventory_activeTab } from '../../../_global';
+	import { inventory_itemCategory, inventory_activeTab } from '../../../_global';
 	import Toastify from 'toastify-js';
 
 	import TabInventory from './inventory/tab_inventory.svelte';
 	import TabAddItem from './inventory/tab_addItem.svelte';
 	import TabArchive from './inventory/tab_archive.svelte';
 	import TabBorrowItem from './inventory/tab_borrowedItems.svelte';
+	import TabCategoryEditor from './inventory/tab_categoryEditor.svelte';
 
 	$: tab = $inventory_activeTab;
 </script>
@@ -31,6 +32,9 @@
 
 				<input type="radio" class="btn-check" name="btnradio" id="btnradio4" autocomplete="off" checked={tab == 4 ? true : false} on:click={() => inventory_activeTab.set(4)} />
 				<label class="btn btn-outline-warning" for="btnradio4">Archived Items</label>
+
+				<input type="radio" class="btn-check" name="btnradio" id="btnradio6" autocomplete="off" checked={tab == 5 ? true : false} on:click={() => inventory_activeTab.set(5)} />
+				<label class="btn btn-outline-dark" for="btnradio6">Type Editor</label>
 			</div>
 		</div>
 	</div>
@@ -46,6 +50,9 @@
 	{/if}
 	{#if tab == 4}
 		<svelte:component this={TabArchive} />
+	{/if}
+	{#if tab == 5}
+		<svelte:component this={TabCategoryEditor} />
 	{/if}
 </main>
 

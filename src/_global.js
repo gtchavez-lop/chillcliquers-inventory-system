@@ -62,6 +62,32 @@ export const borrowedItems = readable(null, (set) => {
 		supabase.removeSubscription(thisSubscription);
 	};
 });
+export const inventory_category_type = readable(null, (set) => {
+	supabase
+		.from('inventory_category_type')
+		.select('*')
+		.then(({ data, error }) => set(data));
+
+	const thisSubscription = supabase
+		.from('inventory_category_type')
+		.on('*', (payload) => {
+			if (payload.eventType === 'INSERT') {
+				set([...get(inventory_category_type), payload]);
+			}
+			if (payload.eventType === 'UPDATE') {
+				let index = get(inventory_category_type).findIndex((thisitem) => thisitem.id === payload.new.id);
+				let oldData = get(inventory_category_type);
+				oldData[index] = payload.new;
+				console.log(payload.new);
+				set(oldData);
+			}
+		})
+		.subscribe();
+
+	return () => {
+		supabase.removeSubscription(thisSubscription);
+	};
+});
 
 export const inventory_itemCategory = [
 	{
