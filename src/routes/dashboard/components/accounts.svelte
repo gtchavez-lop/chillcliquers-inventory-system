@@ -12,6 +12,7 @@
 	$: user_givenName = '';
 	$: user_familyName = '';
 	$: masterKey_input = '';
+	let isLoggingOut = false;
 
 	let isRegistering = false;
 	let isAbleToRegister = false;
@@ -59,6 +60,16 @@
 			alert(error.message);
 		}
 	};
+
+	const signOut = async (e) => {
+		if (isLoggingOut) {
+			let { data, error } = await supabase.auth.signOut();
+
+			if (!error) {
+				goto('/');
+			}
+		}
+	};
 </script>
 
 <embed in:fly={{ x: -40, duration: 500, delay: 100 }} src="./illustration-frosted/SVG/art(6).svg" />
@@ -85,11 +96,38 @@
 						</div>
 					</div>
 				</div>
-				<div class="col-6 offset-6">
+				<div class="col-6">
 					<div class="card mb-4" style="background: #F9F8F3;">
 						<div class="card-body">
 							<p class="display-6 card-title">Last Sign in</p>
 							<h5 class="card-text">{dayjs(thisUser.updated_at).format('MMMM D, YYYY @h:mm:ss A')}</h5>
+						</div>
+					</div>
+				</div>
+				<div class="col-6">
+					<div class="card mb-4" style="background: #F9F8F3;">
+						<div class="card-body">
+							<p class="display-6 card-title">Change Account</p>
+
+							{#if !isLoggingOut}
+								<button
+									on:click={() => {
+										isLoggingOut = true;
+									}}
+									class="btn btn-danger"
+									style="min-width: 200px;">Log out</button
+								>
+							{/if}
+							{#if isLoggingOut}
+								<button on:click={signOut} class="btn btn-danger" style="min-width: 200px;">Log out and change user</button>
+								<button
+									on:click={() => {
+										isLoggingOut = false;
+									}}
+									class="btn btn-outline-primary"
+									style="min-width: 200px;">Not yet</button
+								>
+							{/if}
 						</div>
 					</div>
 				</div>

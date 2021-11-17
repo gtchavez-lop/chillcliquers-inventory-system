@@ -7,8 +7,6 @@
 	import { slide, fly } from 'svelte/transition';
 	import { supabase, borrowedItems } from '../../../_global';
 	import TabBorrowedItems from './borrowedItems/tab_borrowedItems.svelte';
-
-	onMount((e) => {});
 </script>
 
 <embed in:fly={{ x: -40, duration: 500, delay: 100 }} src="./illustration-frosted/SVG/art(15).svg" />

@@ -49,14 +49,13 @@
 		>
 			<i class="bi bi-person-circle" />
 		</li>
-		<hr style="margin: 2em 0;" />
 		<li
 			class={$activeTab == 5 ? 'active' : ''}
 			on:click={() => {
 				setActiveTab(5);
 			}}
 		>
-			<i class="bi bi-gear" />
+			<i class="bi bi-basket" />
 		</li>
 	</ul>
 
